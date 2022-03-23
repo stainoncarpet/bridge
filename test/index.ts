@@ -12,7 +12,7 @@ const TOKEN_SYMBOL = "SMTKN";
 const FIVE_TOKENS = ethers.utils.parseUnits("5");
 const ONE_TOKEN = ethers.utils.parseUnits("1");
 
-describe("Bridge", () => {
+describe("Token & Bridge", () => {
   let Bridge: any, bridgeETH: any, bridgeBNB: any, Token: any, tokenETH: any, tokenBNB: any, signatureAuthority: any;
   let user1: { address: any; }, user2: { address: any; };
 
@@ -64,6 +64,7 @@ describe("Bridge", () => {
       TOKEN_SYMBOL
     ];
 
+    // sending to a friend
     expect(await bridgeETH.connect(user1).swap(...swapArgs))
     .to.emit(bridgeETH, "swapInitialized").withArgs(...swapArgs)
     ;
@@ -75,7 +76,9 @@ describe("Bridge", () => {
     expect(userBalanceBeforeSwap.sub(userBalanceAfterSwap)).to.be.equal(ONE_TOKEN);
   });
 
-  it("Should recover signer", async () => {
+  it("Should finalize swap and mint swapped amount", async () => {
+    const totalSupplyBeforeSwap = await tokenBNB.totalSupply();
+
     await tokenETH.connect(user1).approve(bridgeETH.address, FIVE_TOKENS);
     
     const swapArgs = [
@@ -87,7 +90,14 @@ describe("Bridge", () => {
       TOKEN_SYMBOL
     ];
 
-    await bridgeETH.connect(user1).swap(...swapArgs);
+    // sending to a friend
+    expect(await bridgeETH.connect(user1).swap(...swapArgs))
+    .to.emit(bridgeETH, "swapInitialized").withArgs(...swapArgs)
+    ;
+
+    // should revert if same agruments
+    expect(bridgeETH.connect(user1).swap(...swapArgs))
+    .to.be.revertedWith("Swap already registered");
 
     const message = ethers.utils.solidityKeccak256(
 			["address", "uint256", "uint256", "uint256", "uint256", "string"],
@@ -99,23 +109,19 @@ describe("Bridge", () => {
     // user2 shouldn't have any tokens yet
     expect(await tokenBNB.balanceOf(user2.address)).to.be.equal(0);
 
-    expect(await bridgeBNB.redeem(...swapArgs, signature))
-    .to.emit(bridgeBNB, "swapCompleted")
+    expect(await bridgeBNB.connect(user2).redeem(...swapArgs, signature))
+    .to.emit(bridgeBNB, "swapFinalized")
     .withArgs(...swapArgs)
     ;
 
+    // should revert if trying to redeem twice
+    expect(bridgeBNB.connect(user2).redeem(...swapArgs, signature))
+    .to.be.revertedWith("Swap already registered or data is corrupt");
+
     expect(await tokenBNB.balanceOf(user2.address)).to.be.equal(FIVE_TOKENS);
+
+    const totalSupplyAfterSwap = await tokenBNB.totalSupply();
+
+    expect(totalSupplyBeforeSwap.add(FIVE_TOKENS)).to.be.equal(totalSupplyAfterSwap);
   });
 });
-
-/*
-let msg = ethers.utils.solidityKeccak256(
-			["address", "uint256”],
-			[addr, value]
-)
-
-let signature = await owner.signMessage(ethers.utils.arrayify(msg));
-let sig = await ethers.utils.splitSignature(signatureS0);
-		
-await contract.checkSign(addr, val, v, r, s);
-*/

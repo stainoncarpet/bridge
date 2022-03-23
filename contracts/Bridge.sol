@@ -15,7 +15,7 @@ interface IBridge {
     // function excludeToken() external;
 
     event swapInitialized(address, uint256, uint256, uint256, uint256, string);
-    event swapCompleted(address, uint256, uint256, uint256, uint256, string);
+    event swapFinalized(address, uint256, uint256, uint256, uint256, string);
 }
 
 contract Bridge is IBridge, Ownable {
@@ -30,29 +30,42 @@ contract Bridge is IBridge, Ownable {
 
     //- Функция swap(): списывает токены с пользователя и испускает event ‘swapInitialized’
     function swap(address recipient, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string memory symbol) external {
-        Token.call{value:0}(abi.encodeWithSignature("burn(address,uint256)", msg.sender, amount));
-        emit swapInitialized(recipient, amount, chainfrom, chainto, nonce, symbol);
+        bytes32 swapHash = keccak256(abi.encodePacked(recipient, amount, chainfrom, chainto, nonce, symbol));
+        
+        if(hasBeenSwapped[swapHash] == false) {
+            Token.call{value:0}(abi.encodeWithSignature("burn(address,uint256)", msg.sender, amount));
+            hasBeenSwapped[swapHash] = true;
+            emit swapInitialized(recipient, amount, chainfrom, chainto, nonce, symbol);
+        } else {
+            revert("Swap already registered");
+        }
     }
 
     //- Функция redeem(): вызывает функцию ecrecover и восстанавливает по хэшированному сообщению и сигнатуре адрес валидатора, 
     // если адрес совпадает с адресом указанным на контракте моста то пользователю отправляются токены
     function redeem(address recipient, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string memory symbol, bytes calldata signature) external {
+        require(recipient == msg.sender, "Only recipient can redeem");
+
         bytes32 swapHash = keccak256(abi.encodePacked(recipient, amount, chainfrom, chainto, nonce, symbol));
         address validator = recoverSigner(prefixed(swapHash), signature);
 
         if(validator == Validator && hasBeenSwapped[swapHash] == false) {
             Token.call{value:0}(abi.encodeWithSignature("mint(address,uint256)", recipient, amount));
             hasBeenSwapped[swapHash] = true;
-            emit swapCompleted(recipient, amount, chainfrom, chainto, nonce, symbol);
+            emit swapFinalized(recipient, amount, chainfrom, chainto, nonce, symbol);
+        } else {
+            revert("Swap already registered or data is corrupt");
         }
     }
     
+    // chainid
     //- Функция updateChainById(): добавить блокчейн или удалить по его chainID
     // function updateChainById() external {
 
     // }
 
-   // - Функция includeToken(): добавить токен для передачи его в другую сеть
+    // address + symbol
+   // - Функция includeToken(address addr, string memory symb): добавить токен для передачи его в другую сеть
     // function includeToken() {
 
     // }
