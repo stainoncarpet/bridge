@@ -5,8 +5,6 @@ pragma solidity >=0.8.11 <0.9.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "hardhat/console.sol";
-
 contract Token is ERC20, Ownable {
     address bridge;
 
@@ -24,7 +22,6 @@ contract Token is ERC20, Ownable {
     }
 
     function mint(address account, uint256 amount) external onlyBridge {
-        console.log("MINT", account, amount);
         _mint(account, amount);
     }
 

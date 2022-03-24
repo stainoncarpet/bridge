@@ -1,16 +1,9 @@
+/* eslint-disable node/no-missing-import */
 /* eslint-disable prettier/prettier */
 
 import { expect } from "chai";
 import { ethers } from "hardhat";
-
-const RINKEBY_CHAIN_ID = 4;
-const BINANCE_CHAIN_ID = 97;
-const TWENTY_ONE_MIL_TOKENS = ethers.utils.parseUnits("21000000");
-const ONE_MIL_TOKENS = ethers.utils.parseUnits("1000000");
-const TOKEN_NAME = "Some Token";
-const TOKEN_SYMBOL = "SMTKN";
-const FIVE_TOKENS = ethers.utils.parseUnits("5");
-const ONE_TOKEN = ethers.utils.parseUnits("1");
+import { TWENTY_ONE_MIL_TOKENS, RINKEBY_CHAIN_ID, BINANCE_CHAIN_ID, ONE_MIL_TOKENS, TOKEN_NAME, TOKEN_SYMBOL, FIVE_TOKENS, ONE_TOKEN } from "../hardhat.config";
 
 describe("Token & Bridge", () => {
   let Bridge: any, bridgeETH: any, bridgeBNB: any, Token: any, tokenETH: any, tokenBNB: any, signatureAuthority: any;
@@ -29,13 +22,16 @@ describe("Token & Bridge", () => {
     await tokenBNB.deployed();
 
     Bridge = await ethers.getContractFactory("Bridge");
-    bridgeETH = await Bridge.deploy(signatureAuthority.address);
-    bridgeBNB = await Bridge.deploy(signatureAuthority.address);
+    bridgeETH = await Bridge.deploy();
+    bridgeBNB = await Bridge.deploy();
     await bridgeETH.deployed();
     await bridgeBNB.deployed();
 
     await tokenETH.setBridge(bridgeETH.address);
     await tokenBNB.setBridge(bridgeBNB.address);
+
+    await bridgeETH.setValidator(signatureAuthority.address);
+    await bridgeBNB.setValidator(signatureAuthority.address);
 
     await bridgeETH.includeToken(tokenETH.address, tokenBNB.address, TOKEN_SYMBOL);
     await bridgeBNB.includeToken(tokenETH.address, tokenBNB.address, TOKEN_SYMBOL);
@@ -45,15 +41,8 @@ describe("Token & Bridge", () => {
     await bridgeBNB.updateChainById(RINKEBY_CHAIN_ID);
     await bridgeBNB.updateChainById(BINANCE_CHAIN_ID);
 
-    // console.log("user1", user1.address);
-    // console.log("bridge eth", bridgeETH.address, "token eth", tokenETH.address);
-    // console.log("bridge bnb", bridgeBNB.address, "token ити", tokenBNB.address);
-     console.log("authority", signatureAuthority.address);
-
     await tokenETH.connect(signers[0]).transfer(user1.address, ONE_MIL_TOKENS);
   });
-
-  // beforeEach(async () => { });
 
   it("Should initialize swap and burn swapped amount", async () => {
     const totalSupplyBeforeSwap = await tokenETH.totalSupply();
