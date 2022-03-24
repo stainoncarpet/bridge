@@ -24,37 +24,37 @@ declare global {
   }
 }
 
-task("swap", "Swap ERC20 tokens")
-  .addParam("", "")
-  .setAction(async (taskArguments, hre) => {
-      const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
+// task("swap", "Swap ERC20 tokens")
+//   .addParam("", "")
+//   .setAction(async (taskArguments, hre) => {
+//       const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
 
-      const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
-      const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
-      const bridge = new hre.ethers.Contract(taskArguments., contractSchema.abi, walletOwner);
+//       const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
+//       const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
+//       const bridge = new hre.ethers.Contract(taskArguments., contractSchema.abi, walletOwner);
 
-      // recipient, amount, chainfrom, chainto, nonce, symbol
-      const swapTx = await bridge.swap(taskArguments.tokenuri, taskArguments.owner);
+//       // recipient, amount, chainfrom, chainto, nonce, symbol
+//       const swapTx = await bridge.swap(taskArguments.tokenuri, taskArguments.owner);
 
-      console.log("Receipt: ", swapTx);
-  })
-;
+//       console.log("Receipt: ", swapTx);
+//   })
+// ;
 
-task("redeem", "Swap ERC20 tokens")
-  .addParam("", "")
-  .setAction(async (taskArguments, hre) => {
-      const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
+// task("redeem", "Swap ERC20 tokens")
+//   .addParam("", "")
+//   .setAction(async (taskArguments, hre) => {
+//       const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
 
-      const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
-      const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
-      const bridge = new hre.ethers.Contract(taskArguments., contractSchema.abi, walletOwner);
+//       const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
+//       const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
+//       const bridge = new hre.ethers.Contract(taskArguments., contractSchema.abi, walletOwner);
 
-      // recipient, amount, chainfrom, chainto, nonce, symbol
-      const redeemTx = await bridge.redeem(taskArguments.tokenuri, taskArguments.owner);
+//       // recipient, amount, chainfrom, chainto, nonce, symbol
+//       const redeemTx = await bridge.redeem(taskArguments.tokenuri, taskArguments.owner);
 
-      console.log("Receipt: ", redeemTx);
-  })
-;
+//       console.log("Receipt: ", redeemTx);
+//   })
+// ;
 
 const config: HardhatUserConfig = {
   solidity: "0.8.11",
