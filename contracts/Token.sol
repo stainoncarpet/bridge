@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.8.11 <0.9.0;
 
@@ -27,5 +27,9 @@ contract Token is ERC20, Ownable {
 
     function burn(address account, uint256 amount) external onlyBridge {
         _burn(account, amount);
+    }
+
+    function destroyContract() external onlyOwner {
+        selfdestruct(payable(owner()));
     }
 }

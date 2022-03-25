@@ -1,22 +1,20 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.8.11 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface IBridge {
+contract Bridge is Ownable {
+    address Validator;
+    mapping(bytes32 => bool) hasBeenSwapped;
+    mapping(string => address[2]) availableTokens;
+    mapping(uint256 => bool) availableChains;
+
     event swapInitialized(address, address, uint256, uint256, uint256, uint256, string);
     event swapFinalized(address, address, uint256, uint256, uint256, uint256, string);
     event chainUpdated(uint256, bool);
     event tokenIncluded(address, address, string);
     event tokenExcluded(string);
-}
-
-contract Bridge is IBridge, Ownable {
-    address Validator;
-    mapping(bytes32 => bool) hasBeenSwapped;
-    mapping(string => address[2]) availableTokens;
-    mapping(uint256 => bool) availableChains;
      
     constructor() {}
 
@@ -73,9 +71,8 @@ contract Bridge is IBridge, Ownable {
         emit tokenExcluded(symbol);
     }
 
-
     function splitSignature(bytes memory sig) internal pure returns (uint8 v, bytes32 r, bytes32 s){
-       require(sig.length == 65);
+       require(sig.length == 65, "Incorrect signature");
        assembly {
            r := mload(add(sig, 32))
            s := mload(add(sig, 64))
@@ -104,4 +101,8 @@ contract Bridge is IBridge, Ownable {
            symbol
         ));
    }
+
+    function destroyContract() external onlyOwner {
+        selfdestruct(payable(owner()));
+    }
 }

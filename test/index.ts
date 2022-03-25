@@ -8,9 +8,10 @@ import { TWENTY_ONE_MIL_TOKENS, RINKEBY_CHAIN_ID, BINANCE_CHAIN_ID, ONE_MIL_TOKE
 describe("Token & Bridge", () => {
   let Bridge: any, bridgeETH: any, bridgeBNB: any, Token: any, tokenETH: any, tokenBNB: any, signatureAuthority: any;
   let user1: { address: any; };
+  let signers: any[];
 
-  before(async () => {
-    const signers = await ethers.getSigners();
+  beforeEach(async () => {
+    signers = await ethers.getSigners();
 
     signatureAuthority = signers[14];
     user1 = signers[1];
@@ -42,6 +43,28 @@ describe("Token & Bridge", () => {
     await bridgeBNB.updateChainById(BINANCE_CHAIN_ID);
 
     await tokenETH.connect(signers[0]).transfer(user1.address, ONE_MIL_TOKENS);
+  });
+
+  it("Should get destroyed", async () => {
+    expect(await tokenETH.owner()).to.equal(signers[0].address);
+    expect(await tokenBNB.owner()).to.equal(signers[0].address);
+    expect(await bridgeETH.owner()).to.equal(signers[0].address);
+    expect(await bridgeBNB.owner()).to.equal(signers[0].address);
+
+    await expect(tokenETH.connect(signers[1]).destroyContract()).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(tokenBNB.connect(signers[1]).destroyContract()).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(bridgeETH.connect(signers[1]).destroyContract()).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(bridgeBNB.connect(signers[1]).destroyContract()).to.be.revertedWith("Ownable: caller is not the owner");
+
+    await tokenETH.destroyContract();
+    await tokenBNB.destroyContract();
+    await bridgeETH.destroyContract();
+    await bridgeBNB.destroyContract();
+
+    await expect(tokenETH.owner()).to.be.reverted;
+    await expect(tokenBNB.owner()).to.be.reverted;
+    await expect(bridgeETH.owner()).to.be.reverted;
+    await expect(bridgeBNB.owner()).to.be.reverted;
   });
 
   it("Should initialize swap and burn swapped amount", async () => {
@@ -117,5 +140,57 @@ describe("Token & Bridge", () => {
     const totalSupplyAfterSwap = await tokenBNB.totalSupply();
 
     expect(totalSupplyBeforeSwap.add(FIVE_TOKENS)).to.be.equal(totalSupplyAfterSwap);
+  });
+
+  it("Should remove chain id and not allow to make swaps involving it", async () => {
+    await tokenETH.connect(user1).approve(bridgeETH.address, ONE_TOKEN);
+
+    const swapArgs = [
+      tokenETH.address,
+      ONE_TOKEN,
+      RINKEBY_CHAIN_ID,
+      BINANCE_CHAIN_ID,
+      0,
+      TOKEN_SYMBOL
+    ];
+
+    expect(await bridgeETH.updateChainById(RINKEBY_CHAIN_ID))
+      .to.emit(bridgeETH, "chainUpdated").withArgs(RINKEBY_CHAIN_ID, false)
+    ;
+
+    expect(bridgeETH.connect(user1).swap(...swapArgs))
+      .to.be.revertedWith("Chain is not available")
+    ;
+  });
+
+  it("Should exclude token and not allow to make swaps involving it", async () => {
+    await tokenETH.connect(user1).approve(bridgeETH.address, ONE_TOKEN);
+
+    const swapArgs = [
+      tokenETH.address,
+      ONE_TOKEN,
+      RINKEBY_CHAIN_ID,
+      BINANCE_CHAIN_ID,
+      0,
+      TOKEN_SYMBOL
+    ];
+
+    expect(await bridgeETH.excludeToken(RINKEBY_CHAIN_ID))
+      .to.emit(bridgeETH, "tokenExcluded").withArgs(TOKEN_SYMBOL)
+    ;
+
+    expect(bridgeETH.connect(user1).swap(...swapArgs))
+      .to.be.revertedWith("Token is not available")
+    ;
+  });
+
+  it("Only bridge should be able to mint and burn", async () => {
+    expect(tokenETH.mint(user1.address, FIVE_TOKENS))
+      .to.be.revertedWith("Only bridge can perform this action")
+    ;
+
+    expect(tokenETH.burn(user1.address, FIVE_TOKENS))
+    .to.be.revertedWith("Only bridge can perform this action")
+  ;
   });
 });

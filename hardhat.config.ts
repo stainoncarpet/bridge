@@ -36,7 +36,7 @@ declare global {
 
 task("swap", "Swap ERC20 tokens")
   .addParam("bridge", "Bridge address")
-  .addParam("token", "Token address")
+  .addParam("token", "Source token address")
   .addParam("amount", "Amount to swap")
   .addParam("chainfrom", "Id of chain from")
   .addParam("chainto", "Id of chain to")
@@ -68,21 +68,40 @@ task("swap", "Swap ERC20 tokens")
   })
 ;
 
-// task("redeem", "Swap ERC20 tokens")
-//   .addParam("", "")
-//   .setAction(async (taskArguments, hre) => {
-//       const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
+task("redeem", "Swap ERC20 tokens")
+  .addParam("bridge", "Bridge address")
+  .addParam("token", "Source token address")
+  .addParam("amount", "Amount to swap")
+  .addParam("chainfrom", "Id of chain from")
+  .addParam("chainto", "Id of chain to")
+  .addParam("nonce", "Unique value that will make transaction unique")
+  .addParam("symbol", "Symbol of token")
+  .addParam("signature", "Signature")
+  .setAction(async (taskArguments, hre) => {
+      const contractSchema = require("./artifacts/contracts/Bridge.sol/Bridge.json");
 
-//       const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
-//       const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
-//       const bridge = new hre.ethers.Contract(taskArguments., contractSchema.abi, walletOwner);
+      const alchemyProvider = new hre.ethers.providers.AlchemyProvider("rinkeby", process.env.ALCHEMY_KEY);
+      const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
+      const bridge = new hre.ethers.Contract(taskArguments.bridge, contractSchema.abi, walletOwner);
 
-//       // recipient, amount, chainfrom, chainto, nonce, symbol
-//       const redeemTx = await bridge.redeem(taskArguments.tokenuri, taskArguments.owner);
+      const provider = new hre.ethers.providers.WebSocketProvider("https://data-seed-prebsc-1-s1.binance.org:8545");
+      const filter = bridge.filters.swapFinalized(
+        process.env.METAMASK_PUBLIC_KEY, taskArguments.token, null, null, null, null, null
+      );
+      provider.on(filter, (event) => console.log("Swap finalized event:", event));
 
-//       console.log("Receipt: ", redeemTx);
-//   })
-// ;
+      const swapTx = await bridge.redeem(
+        taskArguments.token, 
+        taskArguments.amount, 
+        taskArguments.chainfrom,
+        taskArguments.chainto,
+        taskArguments.nonce,
+        taskArguments.symbol
+      );
+
+      console.log("Receipt: ", swapTx);
+  })
+;
 
 const config: HardhatUserConfig = {
   solidity: "0.8.11",
