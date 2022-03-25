@@ -25,16 +25,20 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       ETHERSCAN_API_KEY: string;
+      BSCSCAN_API_KEY: string;
       ALCHEMY_KEY: string;
       METAMASK_PRIVATE_KEY: string;
       METAMASK_PUBLIC_KEY: string;
       COINMARKETCAP_API_KEY: string;
       RINKEBY_URL: string;
+      RINKEBY_WS: string;
+      BSCTEST_WS: string;
+      BSCTEST_URL: string;
     }
   }
 }
 
-task("swap", "Swap ERC20 tokens")
+task("swap", "Initialize swap of ERC20 tokens between blockchains")
   .addParam("bridge", "Bridge address")
   .addParam("token", "Source token address")
   .addParam("amount", "Amount to swap")
@@ -49,11 +53,13 @@ task("swap", "Swap ERC20 tokens")
       const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
       const bridge = new hre.ethers.Contract(taskArguments.bridge, contractSchema.abi, walletOwner);
 
-      const provider = new hre.ethers.providers.WebSocketProvider("https://data-seed-prebsc-1-s1.binance.org:8545");
+      const providerETH = new hre.ethers.providers.WebSocketProvider(process.env.RINKEBY_WS);
+      const providerBNB = new hre.ethers.providers.WebSocketProvider(process.env.BSCTEST_WS);
       const filter = bridge.filters.swapInitialized(
         process.env.METAMASK_PUBLIC_KEY, taskArguments.token, null, null, null, null, null
       );
-      provider.on(filter, (event) => console.log("Swap initialized event:", event));
+      providerETH.on(filter, (event) => console.log("[ETH] Swap initialized event:", event));
+      providerBNB.on(filter, (event) => console.log("[BSC] Swap initialized event:", event));
 
       const swapTx = await bridge.swap(
         taskArguments.token, 
@@ -68,7 +74,7 @@ task("swap", "Swap ERC20 tokens")
   })
 ;
 
-task("redeem", "Swap ERC20 tokens")
+task("redeem", "Finalize swap of ERC20 tokens between blockchains by providing signature")
   .addParam("bridge", "Bridge address")
   .addParam("token", "Source token address")
   .addParam("amount", "Amount to swap")
@@ -84,11 +90,13 @@ task("redeem", "Swap ERC20 tokens")
       const walletOwner = new hre.ethers.Wallet(process.env.METAMASK_PRIVATE_KEY, alchemyProvider);
       const bridge = new hre.ethers.Contract(taskArguments.bridge, contractSchema.abi, walletOwner);
 
-      const provider = new hre.ethers.providers.WebSocketProvider("https://data-seed-prebsc-1-s1.binance.org:8545");
+      const providerETH = new hre.ethers.providers.WebSocketProvider(process.env.RINKEBY_WS);
+      const providerBNB = new hre.ethers.providers.WebSocketProvider(process.env.BSCTEST_WS);
       const filter = bridge.filters.swapFinalized(
         process.env.METAMASK_PUBLIC_KEY, taskArguments.token, null, null, null, null, null
       );
-      provider.on(filter, (event) => console.log("Swap finalized event:", event));
+      providerETH.on(filter, (event) => console.log("[ETH] Swap finalized event:", event));
+      providerBNB.on(filter, (event) => console.log("[BSC] Swap finalized event:", event));
 
       const swapTx = await bridge.redeem(
         taskArguments.token, 
@@ -113,7 +121,7 @@ const config: HardhatUserConfig = {
       gasPrice: 8000000000
     },
     bsctest: {
-      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      url: process.env.BSCTEST_URL,
       chainId: 97,
       gasPrice: 20000000000,
       accounts: [process.env.METAMASK_PRIVATE_KEY],

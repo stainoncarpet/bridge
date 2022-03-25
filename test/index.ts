@@ -70,7 +70,7 @@ describe("Token & Bridge", () => {
   it("Should initialize swap and burn swapped amount", async () => {
     const totalSupplyBeforeSwap = await tokenETH.totalSupply();
     const userBalanceBeforeSwap = await tokenETH.balanceOf(user1.address);
-    // allow bridge to manage 1 tokenETH
+
     await tokenETH.connect(user1).approve(bridgeETH.address, ONE_TOKEN);
 
     const swapArgs = [
@@ -84,7 +84,7 @@ describe("Token & Bridge", () => {
 
     expect(await bridgeETH.connect(user1).swap(...swapArgs))
       .to.emit(bridgeETH, "swapInitialized").withArgs(user1.address, ...swapArgs)
-      ;
+    ;
 
     const totalSupplyAfterSwap = await tokenETH.totalSupply();
     const userBalanceAfterSwap = await tokenETH.balanceOf(user1.address);
@@ -111,7 +111,6 @@ describe("Token & Bridge", () => {
       .to.emit(bridgeETH, "swapInitialized").withArgs(...swapArgs)
     ;
 
-    // should revert if same agruments
     expect(bridgeETH.connect(user1).swap(...swapArgs))
       .to.be.revertedWith("Swap already registered")
     ;
@@ -130,7 +129,6 @@ describe("Token & Bridge", () => {
       .withArgs(user1.address, tokenBNB.address, ...swapArgs.slice(1))
     ;
 
-    // should revert if trying to redeem twice
     expect(bridgeBNB.connect(user1).redeem(...swapArgs, signature))
       .to.be.revertedWith("Swap already registered or data is corrupt")
     ;
@@ -190,7 +188,7 @@ describe("Token & Bridge", () => {
     ;
 
     expect(tokenETH.burn(user1.address, FIVE_TOKENS))
-    .to.be.revertedWith("Only bridge can perform this action")
-  ;
+      .to.be.revertedWith("Only bridge can perform this action")
+    ;
   });
 });

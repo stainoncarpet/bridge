@@ -5,21 +5,21 @@ pragma solidity >=0.8.11 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Bridge is Ownable {
-    address Validator;
+    address validator;
     mapping(bytes32 => bool) hasBeenSwapped;
     mapping(string => address[2]) availableTokens;
     mapping(uint256 => bool) availableChains;
 
-    event swapInitialized(address, address, uint256, uint256, uint256, uint256, string);
-    event swapFinalized(address, address, uint256, uint256, uint256, uint256, string);
-    event chainUpdated(uint256, bool);
-    event tokenIncluded(address, address, string);
-    event tokenExcluded(string);
+    event swapInitialized(address indexed sender, address indexed sourceToken, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string indexed symbol);
+    event swapFinalized(address indexed sender, address indexed sourceToken, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string indexed symbol);
+    event chainUpdated(uint256 indexed chainId, bool indexed isAvailable);
+    event tokenIncluded(address, address, string indexed symbol);
+    event tokenExcluded(string indexed symbol);
      
     constructor() {}
 
     function setValidator(address _validator) external onlyOwner {
-        Validator = _validator;
+        validator = _validator;
     }
 
     function swap(address sourceToken, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string memory symbol) external {
@@ -38,9 +38,9 @@ contract Bridge is Ownable {
 
     function redeem(address sourceToken, uint256 amount, uint256 chainfrom, uint256 chainto, uint256 nonce, string memory symbol, bytes calldata signature) external {
         bytes32 swapHash = getSwapHash(msg.sender, sourceToken, amount, chainfrom, chainto, nonce, symbol);
-        address validator = recoverSigner(prefixed(swapHash), signature);
+        address _validator = recoverSigner(prefixed(swapHash), signature);
 
-        if(validator == Validator && hasBeenSwapped[swapHash] == false) {
+        if(_validator == validator && hasBeenSwapped[swapHash] == false) {
             address targetToken = availableTokens[symbol][0] == sourceToken ? availableTokens[symbol][1] : availableTokens[symbol][0];
             targetToken.call{value:0}(abi.encodeWithSignature("mint(address,uint256)", msg.sender, amount));
             hasBeenSwapped[swapHash] = true;
